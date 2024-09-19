@@ -64,7 +64,8 @@ class ContentElementWrap implements ContentObjectStdWrapHookInterface
         if ($parentObject->getCurrentTable() !== 'tt_content') {
             throw new InvalidTableContext('"stdWrap.turboFrameWrap" can only be used for table "tt_content"', 1671124640);
         }
-        $controller = $parentObject->getTypoScriptFrontendController();
+
+        $controller = $GLOBALS['TSFE'];  // Statt getRequest()
         assert($controller instanceof TypoScriptFrontendController);
 
         $path = $configuration['turboFrameWrap.']['path'] ?? $this->determineRenderingPath($controller, $parentObject, $configuration);
@@ -74,13 +75,17 @@ class ContentElementWrap implements ContentObjectStdWrapHookInterface
         $context = $contextFactory->forPath($path, $record);
         $scopeFrame = (bool)$parentObject->stdWrapValue('scopeFrame', $configuration['turboFrameWrap.'] ?? [], 1);
         $frameId = $parentObject->stdWrapValue('frameId', $configuration['turboFrameWrap.'] ?? [], null);
+        
+        // Klassische Parameter-Übergabe statt benannter Parameter
         $frame = new Frame(
-            baseId: (string)($frameId ?? $parentObject->currentRecord),
-            wrapResponse: true,
-            scope: $scopeFrame ? $context->scope : null,
+            (string)($frameId ?? $parentObject->currentRecord),
+            true, // wrapResponse
+            $scopeFrame ? $context->scope : null
         );
+        
         $showWhenFrameMatches = (bool)$parentObject->stdWrapValue('showWhenFrameMatches', $configuration['turboFrameWrap.'] ?? [], false);
-        $requestedFrame = $parentObject->getRequest()->getAttribute('topwireFrame');
+        $requestedFrame = $GLOBALS['TSFE']->getRequest()->getAttribute('topwireFrame');
+        
         if ($scopeFrame
             && $showWhenFrameMatches
             && (
@@ -90,15 +95,17 @@ class ContentElementWrap implements ContentObjectStdWrapHookInterface
         ) {
             return '';
         }
+
         $context = $context->withAttribute('frame', $frame);
+        
         return (new FrameRenderer())->render(
-            frame: $frame,
-            content: $content,
-            options: new FrameOptions(
-                propagateUrl: (bool)$parentObject->stdWrapValue('propagateUrl', $configuration['turboFrameWrap.'] ?? [], 0),
-                morph: (bool)$parentObject->stdWrapValue('morph', $configuration['turboFrameWrap.'] ?? [], 0),
+            $frame, // Frame
+            $content, // Content
+            new FrameOptions(
+                (bool)$parentObject->stdWrapValue('propagateUrl', $configuration['turboFrameWrap.'] ?? [], 0),
+                (bool)$parentObject->stdWrapValue('morph', $configuration['turboFrameWrap.'] ?? [], 0)
             ),
-            context: $scopeFrame ? $context : null,
+            $scopeFrame ? $context : null
         );
     }
 
@@ -109,7 +116,7 @@ class ContentElementWrap implements ContentObjectStdWrapHookInterface
      */
     private function determineRenderingPath(TypoScriptFrontendController $controller, ContentObjectRenderer $cObj, array $configuration): string
     {
-        $frontendTypoScript = $cObj->getRequest()->getAttribute('frontend.typoscript');
+        $frontendTypoScript = $GLOBALS['TSFE']->getRequest()->getAttribute('frontend.typoscript');
         $setup = $frontendTypoScript?->getSetupArray();
         if (!$frontendTypoScript instanceof FrontendTypoScript) {
             // TYPO3 v11 compatibility
@@ -118,15 +125,18 @@ class ContentElementWrap implements ContentObjectStdWrapHookInterface
         if (!isset($setup['tt_content'], $configuration['turboFrameWrap.'])) {
             throw new InvalidTableContext('"stdWrap.turboFrameWrap" can only be used for table "tt_content", typoscript setup missing!', 1687873940);
         }
+
         $frameWrapConfig = $configuration['turboFrameWrap.'];
         $paths = [
             'tt_content.',
-            'tt_content./' . $cObj->data['CType'] . '.',
-            'tt_content./' . $cObj->data['CType'] . './20.',
+            'tt_content.' . $cObj->data['CType'] . '.',
+            'tt_content.' . $cObj->data['CType'] . '.20.',
         ];
+
         if ($cObj->data['CType'] === 'list') {
-            $paths[] = 'tt_content./' . $cObj->data['CType'] . './20./' . $cObj->data['list_type'] . '.';
+            $paths[] = 'tt_content.' . $cObj->data['CType'] . '.20.' . $cObj->data['list_type'] . '.';
         }
+
         foreach ($paths as $path) {
             try {
                 $potentialWrapConfig = ArrayUtility::getValueByPath($setup, $path . '/stdWrap./turboFrameWrap.');
@@ -137,6 +147,7 @@ class ContentElementWrap implements ContentObjectStdWrapHookInterface
                 $potentialWrapConfig = [];
             }
         }
+
         return 'tt_content';
     }
 }
