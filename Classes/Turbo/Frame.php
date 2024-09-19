@@ -6,29 +6,29 @@ use Topwire\Context\Attribute;
 
 class Frame implements Attribute
 {
-    private const idSeparatorToken = '__';
-    public readonly string $id;
+    private const ID_SEPARATOR_TOKEN = '__';
+    private string $id;
 
     public function __construct(
-        public readonly string $baseId,
-        public readonly bool $wrapResponse,
-        public readonly ?string $scope,
+        public string $baseId,
+        public bool $wrapResponse,
+        public ?string $scope,
     ) {
         $this->id = $baseId
-            . ($scope === null ? '' : self::idSeparatorToken . $scope)
-        ;
+            . ($scope === null ? '' : self::ID_SEPARATOR_TOKEN . $scope);
     }
 
     /**
      * @param array<string, mixed> $data
      * @param array<string, mixed> $context
+     * @return self
      */
     public static function denormalize(array $data, array $context = []): self
     {
         return new Frame(
             $data['baseId'],
-            $data['wrapResponse'] ?? false,
-            array_key_exists('scope', $data) ? $data['scope'] : $context['context']?->scope,
+            isset($data['wrapResponse']) ? $data['wrapResponse'] : false,
+            isset($data['scope']) ? $data['scope'] : (isset($context['context']) ? $context['context']['scope'] : null)
         );
     }
 
@@ -37,7 +37,10 @@ class Frame implements Attribute
         return $this->wrapResponse ? $this->baseId : '';
     }
 
-    public function jsonSerialize(): mixed
+    /**
+     * @return array<string, mixed>
+     */
+    public function jsonSerialize(): array
     {
         $data = [
             'baseId' => $this->baseId,
