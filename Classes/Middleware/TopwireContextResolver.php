@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace Topwire\Middleware;
 
 use Psr\Http\Message\RequestInterface;
@@ -15,8 +17,11 @@ use TYPO3\CMS\Core\Routing\PageArguments;
 
 class TopwireContextResolver implements MiddlewareInterface
 {
-    public function __construct(private readonly FrontendInterface $cache)
+    private FrontendInterface $cache;
+
+    public function __construct(FrontendInterface $cache)
     {
+        $this->cache = $cache;
     }
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
@@ -26,35 +31,26 @@ class TopwireContextResolver implements MiddlewareInterface
         if ($contextString !== '') {
             $context = TopwireContext::fromUntrustedString($contextString, new ContextDenormalizer());
         }
+
         $pageArguments = $request->getAttribute('routing');
-        if (!$context instanceof TopwireContext
-            || !$pageArguments instanceof PageArguments
-        ) {
+        if (!$context instanceof TopwireContext || !$pageArguments instanceof PageArguments) {
             return $this->addVaryHeader($handler->handle($request->withAttribute('topwire', null)));
         }
+
         $cacheId = $context->cacheId;
         $frame = $context->getAttribute('frame');
         if ($context->contextRecord->pageId !== $pageArguments->getPageId()) {
-            // Crossing page boundaries happen, when the controller returns a redirect response
-            // In this case, the context is invalid, needs to be reset and a full page render must happen
-            // Hotwire is smart enough in this case to convert the response to a full page visit,
-            // when the target page does not contain a corresponding frame id.
-            // This also allows for advanced setups, where the new target page actually contains the
-            // frame id, e.g. for forms with a "thank you" element on a different page than the form.
             if (!$this->isPageBoundaryCrossingAllowed($context, $request)) {
                 return $this->addVaryHeader($handler->handle($request->withAttribute('topwire', null)));
             }
-            // Unset the context, because it is invalid on current page, but keep the validated frame
-            // around, to allow elements on the target page with the same id show up, while keep them
-            // hidden on a regular request.
             $context = null;
         }
+
         $newStaticArguments = array_merge(
             $pageArguments->getStaticArguments(),
-            [
-                TopwireContext::argumentName => $cacheId,
-            ]
+            [TopwireContext::argumentName => $cacheId]
         );
+
         $modifiedPageArguments = new PageArguments(
             $pageArguments->getPageId(),
             $pageArguments->getPageType(),
@@ -62,11 +58,11 @@ class TopwireContextResolver implements MiddlewareInterface
             $newStaticArguments,
             $pageArguments->getDynamicArguments()
         );
+
         $request = $request
             ->withAttribute('routing', $modifiedPageArguments)
             ->withAttribute('topwire', $context)
-            ->withAttribute('topwireFrame', $frame)
-        ;
+            ->withAttribute('topwireFrame', $frame);
 
         return $this->addVaryHeader($this->trackPageBoundaries($handler->handle($request), $context));
     }
@@ -100,9 +96,7 @@ class TopwireContextResolver implements MiddlewareInterface
         $this->cache->set(
             $cacheIdentifier,
             $allowedUris,
-            [
-                'pageId_' . $context->contextRecord->pageId,
-            ]
+            ['pageId_' . $context->contextRecord->pageId]
         );
         return $response;
     }
