@@ -18,11 +18,16 @@ class TopwireContext implements \JsonSerializable
      */
     private array $attributes = [];
 
+    private RenderingPath $renderingPath;
+    private ContextRecord $contextRecord;
+
     public function __construct(
-        private RenderingPath $renderingPath,
-        private ContextRecord $contextRecord,
+        RenderingPath $renderingPath,
+        ContextRecord $contextRecord,
         ?string $cacheId = null
     ) {
+        $this->renderingPath = $renderingPath;
+        $this->contextRecord = $contextRecord;
         $this->scope = md5(
             $this->renderingPath->jsonSerialize()
             . $this->contextRecord->tableName
