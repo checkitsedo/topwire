@@ -9,8 +9,8 @@ use Topwire\Context\TopwireContext;
 use Topwire\Turbo\Frame;
 use Topwire\Turbo\FrameOptions;
 use Topwire\Turbo\FrameRenderer;
-use TYPO3\CMS\Core\Site\Entity\Site;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\Site\Entity\Site;
 use TYPO3\CMS\Extbase\Mvc\Web\Routing\UriBuilder;
 use TYPO3\CMS\Fluid\Core\Rendering\RenderingContext;
 use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
@@ -26,7 +26,7 @@ class FrameViewHelper extends AbstractViewHelper
     public function initializeArguments(): void
     {
         $this->registerArgument('id', 'string', 'id of the frame', true);
-        $this->registerArgument('src', 'string', 'Either the keyword "async", which takes current Topwire context is taken into account, when fetching the HTML asynchronously. Alternatively can be set to any URL, for full flexibility.');
+        $this->registerArgument('src', 'string', 'Either the keyword "async", which takes current Topwire context into account, when fetching the HTML asynchronously. Alternatively can be set to any URL, for full flexibility.');
         $this->registerArgument('wrapResponse', 'bool', 'Whether to wrap the response of the content in this frame. Useful, for plugins or content, that isn\'t adapted to use Hotwire frames', false, false);
         $this->registerArgument('morph', 'bool', 'Whether the response HTML should be morphed instead of fully replaced', false, false);
         $this->registerArgument('propagateUrl', 'bool', 'Whether the URL should be pushed to browser history', false, false);
