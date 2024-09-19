@@ -1,12 +1,13 @@
 <?php
 declare(strict_types=1);
+
 namespace Topwire\Context;
 
 use Topwire\Turbo\Frame;
 
 class ContextDenormalizer
 {
-    private const attributeMap = [
+    private const ATTRIBUTE_MAP = [
         'frame' => Frame::class,
     ];
 
@@ -16,15 +17,24 @@ class ContextDenormalizer
      */
     public function denormalize(array $data): TopwireContext
     {
-        $context = new TopwireContext(
-            renderingPath: new RenderingPath($data['renderingPath']),
-            contextRecord: new ContextRecord(...$data['contextRecord']),
+        // Create RenderingPath and ContextRecord without named arguments
+        $renderingPath = new RenderingPath($data['renderingPath']);
+        $contextRecord = new ContextRecord(
+            $data['contextRecord']['tableName'],
+            $data['contextRecord']['id'],
+            $data['contextRecord']['pageId']
         );
+
+        $context = new TopwireContext(
+            $renderingPath,
+            $contextRecord
+        );
+
         if (isset($data['attributes'])) {
             foreach ($data['attributes'] as $name => $attributeData) {
-                if (isset(self::attributeMap[$name])) {
+                if (isset(self::ATTRIBUTE_MAP[$name])) {
                     /** @var Attribute $className */
-                    $className = self::attributeMap[$name];
+                    $className = self::ATTRIBUTE_MAP[$name];
                     $attribute = $className::denormalize($attributeData, ['context' => $context]);
                     if ($attribute instanceof Attribute) {
                         $context = $context->withAttribute($name, $attribute);
@@ -32,6 +42,7 @@ class ContextDenormalizer
                 }
             }
         }
+
         return $context;
     }
 }
