@@ -7,18 +7,20 @@ use Topwire\Context\Exception\InvalidTopwireContext;
 class TopwireHash
 {
     private const hashSeparator = '::hash::';
-    public readonly string $hashedString;
-    public function __construct(public readonly string $secureString)
+    public string $hashedString;
+    public string $secureString;
+
+    public function __construct(string $secureString)
     {
+        $this->secureString = $secureString;
         $this->hashedString = $this->secureString
             . self::hashSeparator
-            . self::calculateHmac($this->secureString)
-        ;
+            . self::calculateHmac($this->secureString);
     }
 
     public static function fromUntrustedString(string $untrustedString): self
     {
-        if (!str_contains($untrustedString, self::hashSeparator)) {
+        if (strpos($untrustedString, self::hashSeparator) === false) {
             throw new InvalidTopwireContext('No hmac submitted', 1671485145);
         }
         [$securedString, $hash] = explode(self::hashSeparator, $untrustedString);
@@ -33,7 +35,7 @@ class TopwireHash
         return hash_hmac(
             'sha1',
             $secureString,
-            $GLOBALS['TYPO3_CONF_VARS']['SYS']['encryptionKey'] . self::class,
+            $GLOBALS['TYPO3_CONF_VARS']['SYS']['encryptionKey'] . self::class
         );
     }
 }
