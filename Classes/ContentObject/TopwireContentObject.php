@@ -49,7 +49,8 @@ class TopwireContentObject extends AbstractContentObject
 
     private function renderContentWithoutRecursion(TopwireContext $context): string
     {
-        $actionRecursionPrefix = $context->getAttribute('plugin')?->actionName ?? null;
+        $plugin = $context->getAttribute('plugin');
+        $actionRecursionPrefix = $plugin ? $plugin->actionName : null;
         $frontendController = $GLOBALS['TSFE']->getRequest()->getAttribute('frontend.controller');  // Zugriff auf Request über TSFE
 
         if (!isset($actionRecursionPrefix)
