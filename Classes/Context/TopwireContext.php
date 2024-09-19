@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+
 namespace Topwire\Context;
 
 use Psr\Http\Message\ServerRequestInterface;
@@ -9,8 +10,8 @@ class TopwireContext implements \JsonSerializable
     public const headerName = 'Topwire-Context';
     public const argumentName = 'tx_topwire';
 
-    public readonly string $scope;
-    public readonly string $cacheId;
+    public string $scope;
+    public string $cacheId;
 
     /**
      * @var array<string, Attribute>
@@ -18,9 +19,9 @@ class TopwireContext implements \JsonSerializable
     private array $attributes = [];
 
     public function __construct(
-        public readonly RenderingPath $renderingPath,
-        public readonly ContextRecord $contextRecord,
-        ?string $cacheId = null,
+        public RenderingPath $renderingPath,
+        public ContextRecord $contextRecord,
+        ?string $cacheId = null
     ) {
         $this->scope = md5(
             $this->renderingPath->jsonSerialize()
@@ -43,7 +44,7 @@ class TopwireContext implements \JsonSerializable
 
     public static function isRequestSubmitted(?ServerRequestInterface $request): bool
     {
-        return isset($request?->getQueryParams()[self::argumentName]) || ($request?->hasHeader(self::headerName) ?? false);
+        return isset($request) && (isset($request->getQueryParams()[self::argumentName]) || $request->hasHeader(self::headerName));
     }
 
     public function toHashedString(): string
@@ -61,7 +62,7 @@ class TopwireContext implements \JsonSerializable
 
     public function withAttribute(
         string $name,
-        Attribute $attribute,
+        Attribute $attribute
     ): self {
         $newContext = new self(
             $this->renderingPath,
@@ -89,7 +90,7 @@ class TopwireContext implements \JsonSerializable
         ];
         $attributes = array_filter(
             $this->attributes,
-            static fn (Attribute $attribute): bool => $attribute->jsonSerialize() !== null,
+            static fn (Attribute $attribute): bool => $attribute->jsonSerialize() !== null
         );
         if ($attributes !== []) {
             $normalizedContext['attributes'] = $attributes;
