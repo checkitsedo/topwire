@@ -11,7 +11,7 @@ class ContextStack
      * @var TopwireContext[]
      */
     private array $stack = [];
-    private readonly self $currentStack;
+    private ContextStack $currentStack;
 
     public function __construct(ViewHelperVariableContainer $variableContainer)
     {
@@ -30,7 +30,7 @@ class ContextStack
     {
         if (count($this->currentStack->stack) < 1) {
             // @todo use more specific exception
-            throw new \LogicException('Can not pop off component info from empty stack', 1671619657);
+            throw new \LogicException('Cannot pop off component info from empty stack', 1671619657);
         }
         return array_pop($this->currentStack->stack);
     }
