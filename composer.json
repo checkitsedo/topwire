@@ -46,7 +46,7 @@
     "require": {
         "php": ">=7.4",
         "typo3/cms-core": "^10.4 || ^11.5.29 || ^12.4.5",
-        "helhum/typo3-console": "^7 || ^8"
+        "helhum/typo3-console": "^6 || ^7 || ^8"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.2",
