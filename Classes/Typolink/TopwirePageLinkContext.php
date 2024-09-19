@@ -7,9 +7,37 @@ use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
 class TopwirePageLinkContext
 {
+    /**
+     * @var ContentObjectRenderer
+     */
+    private $contentObjectRenderer;
+
+    /**
+     * @var TypoScriptFrontendController
+     */
+    private $frontendController;
+
     public function __construct(
-        public readonly ContentObjectRenderer $contentObjectRenderer,
-        public readonly TypoScriptFrontendController $frontendController,
+        ContentObjectRenderer $contentObjectRenderer,
+        TypoScriptFrontendController $frontendController
     ) {
+        $this->contentObjectRenderer = $contentObjectRenderer;
+        $this->frontendController = $frontendController;
+    }
+
+    /**
+     * @return ContentObjectRenderer
+     */
+    public function getContentObjectRenderer(): ContentObjectRenderer
+    {
+        return $this->contentObjectRenderer;
+    }
+
+    /**
+     * @return TypoScriptFrontendController
+     */
+    public function getFrontendController(): TypoScriptFrontendController
+    {
+        return $this->frontendController;
     }
 }
