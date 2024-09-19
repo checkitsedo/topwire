@@ -23,7 +23,7 @@ $EM_CONF[$_EXTKEY] = [
     'author_company' => '',
     'autoload' => [
         'psr-4' => [
-            'Topwire\\Topwire\\' => 'Classes'
+            'Topwire\\' => 'Classes'
         ],
     ],
 ];
