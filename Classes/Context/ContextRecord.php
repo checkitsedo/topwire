@@ -6,18 +6,26 @@ use Topwire\Context\Exception\TableNameNotFound;
 
 class ContextRecord implements \JsonSerializable
 {
+    public string $tableName;
+    public int $id;
+    public int $pageId;
+
     public function __construct(
-        public readonly string $tableName,
-        public readonly int $id,
-        public readonly int $pageId
+        string $tableName,
+        int $id,
+        int $pageId
     ) {
+        $this->tableName = $tableName;
+        $this->id = $id;
+        $this->pageId = $pageId;
+
         if (!isset($GLOBALS['TCA'][$tableName])) {
-            throw new TableNameNotFound(sprintf('Table name "%s" is invalid', 1671023687));
+            throw new TableNameNotFound(sprintf('Table name "%s" is invalid', $tableName, 1671023687));
         }
     }
 
     /**
-     * @return array{tableName: string, id: int}
+     * @return array{tableName: string, id: int, pageId: int}
      */
     public function jsonSerialize(): array
     {
