@@ -15,18 +15,24 @@ use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
  */
 class TopwireRendering implements MiddlewareInterface
 {
-    private const defaultContentType = 'text/html';
-    private const turboStreamContentType = 'text/vnd.turbo-stream.html';
+    private const DEFAULT_CONTENT_TYPE = 'text/html';
+    private const TURBO_STREAM_CONTENT_TYPE = 'text/vnd.turbo-stream.html';
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $frontendController = $request->getAttribute('frontend.controller');
-        assert($frontendController instanceof TypoScriptFrontendController);
+        
+        // Nullprüfung auf TypoScriptFrontendController
+        if (!$frontendController instanceof TypoScriptFrontendController) {
+            return $this->validateContentType($request, $handler->handle($request));
+        }
+
         $context = $request->getAttribute('topwire');
         if (!$context instanceof TopwireContext || !$frontendController->isGeneratePage()) {
             return $this->validateContentType($request, $handler->handle($request));
         }
 
+        // Anpassung der TypoScript-Konfiguration
         $frontendController->config['config']['debug'] = 0;
         $frontendController->config['config']['disableAllHeaderCode'] = 1;
         $frontendController->config['config']['disableCharsetHeader'] = 0;
@@ -43,22 +49,29 @@ class TopwireRendering implements MiddlewareInterface
     private function validateContentType(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
         $contentTypeHeader = $response->getHeaderLine('Content-Type');
-        $isStreamResponseAllowed = str_contains($request->getHeaderLine('Accept'), self::turboStreamContentType);
+        $acceptHeader = $request->getHeaderLine('Accept');
+
+        // Verwendung von strpos und substr anstelle von str_contains und str_starts_with
+        $isStreamResponseAllowed = strpos($acceptHeader, self::TURBO_STREAM_CONTENT_TYPE) !== false;
+        $contentTypeIsDefault = strpos($contentTypeHeader, self::DEFAULT_CONTENT_TYPE) === 0;
+        $contentTypeIsTurboStream = $isStreamResponseAllowed && strpos($contentTypeHeader, self::TURBO_STREAM_CONTENT_TYPE) === 0;
+
         if ($contentTypeHeader === ''
             || $response->getStatusCode() !== 200
             || !$request->hasHeader('Turbo-Frame')
-            || str_starts_with($contentTypeHeader, self::defaultContentType)
-            || ($isStreamResponseAllowed && str_starts_with($contentTypeHeader, self::turboStreamContentType))
+            || $contentTypeIsDefault
+            || $contentTypeIsTurboStream
         ) {
             return $response;
         }
+
         throw new InvalidContentType(
             sprintf(
                 'Turbo frame requests must return content/type "%s"%s, got "%s". '
                 . 'Maybe forgot to add data-turbo="false" attribute for links leading to this error? '
                 . 'Alternatively you can rewrite the current URL to have a file extension',
-                self::defaultContentType,
-                $isStreamResponseAllowed ? sprintf(' or "%s"', self::turboStreamContentType) : '',
+                self::DEFAULT_CONTENT_TYPE,
+                $isStreamResponseAllowed ? sprintf(' or "%s"', self::TURBO_STREAM_CONTENT_TYPE) : '',
                 $contentTypeHeader
             ),
             1671308188
