@@ -35,19 +35,37 @@ class ContextViewHelper extends AbstractViewHelper
         \Closure $renderChildrenClosure,
         RenderingContextInterface $renderingContext
     ): string {
-        assert($renderingContext instanceof RenderingContext);
-        $frontendController = $renderingContext->getRequest()?->getAttribute('frontend.controller');
-        assert($frontendController instanceof TypoScriptFrontendController);
-        $contextFactory = new TopwireContextFactory(
-            $frontendController
-        );
+        if (!$renderingContext instanceof RenderingContext) {
+            throw new \InvalidArgumentException('Expected instance of RenderingContext');
+        }
+
+        $request = $renderingContext->getRequest();
+        if ($request === null) {
+            throw new \RuntimeException('Request is not available');
+        }
+
+        $frontendController = $request->getAttribute('frontend.controller');
+        if (!$frontendController instanceof TypoScriptFrontendController) {
+            throw new \RuntimeException('Frontend controller is not available or of incorrect type');
+        }
+
+        $contextFactory = new TopwireContextFactory($frontendController);
+
+        $typoScriptPath = $arguments['typoScriptPath'] ?? '';
+        $tableName = $arguments['tableName'] ?? 'pages';
+        $recordUid = $arguments['recordUid'] ?? '';
+        $contextRecordId = $tableName . ':' . $recordUid;
+
         $context = $contextFactory->forPath(
-            renderingPath: $arguments['typoScriptPath'],
-            contextRecordId: $arguments['tableName'] . ':' . $arguments['recordUid'],
+            $typoScriptPath,
+            $contextRecordId
         );
+
         $contextStack = new ContextStack($renderingContext->getViewHelperVariableContainer());
         $contextStack->push($context);
+
         $renderedChildren = $renderChildrenClosure();
+
         $contextStack->pop();
 
         return (string)$renderedChildren;
