@@ -4,8 +4,11 @@ namespace Topwire\Context;
 
 class RenderingPath implements \JsonSerializable
 {
-    public function __construct(private readonly string $renderingPath)
+    private string $renderingPath;
+
+    public function __construct(string $renderingPath)
     {
+        $this->renderingPath = $renderingPath;
     }
 
     public function jsonSerialize(): string
