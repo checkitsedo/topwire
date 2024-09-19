@@ -117,7 +117,7 @@ class ContentElementWrap implements ContentObjectStdWrapHookInterface
     private function determineRenderingPath(TypoScriptFrontendController $controller, ContentObjectRenderer $cObj, array $configuration): string
     {
         $frontendTypoScript = $GLOBALS['TSFE']->getRequest()->getAttribute('frontend.typoscript');
-        $setup = $frontendTypoScript?->getSetupArray();
+        $setup = $frontendTypoScript ? $frontendTypoScript->getSetupArray() : null;
         if (!$frontendTypoScript instanceof FrontendTypoScript) {
             // TYPO3 v11 compatibility
             $setup = $controller->tmpl->setup;
