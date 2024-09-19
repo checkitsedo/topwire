@@ -31,19 +31,32 @@ class ContentElementViewHelper extends AbstractViewHelper
         \Closure $renderChildrenClosure,
         RenderingContextInterface $renderingContext
     ): string {
-        assert($renderingContext instanceof RenderingContext);
-        $frontendController = $renderingContext->getRequest()?->getAttribute('frontend.controller');
-        assert($frontendController instanceof TypoScriptFrontendController);
-        $contextFactory = new TopwireContextFactory(
-            $frontendController
-        );
+        if (!$renderingContext instanceof RenderingContext) {
+            throw new \InvalidArgumentException('Expected instance of RenderingContext');
+        }
+
+        $request = $renderingContext->getRequest();
+        if ($request === null) {
+            throw new \RuntimeException('Request is not available');
+        }
+
+        $frontendController = $request->getAttribute('frontend.controller');
+        if (!$frontendController instanceof TypoScriptFrontendController) {
+            throw new \RuntimeException('Frontend controller is not available or of incorrect type');
+        }
+
+        $contextFactory = new TopwireContextFactory($frontendController);
+
         $context = $contextFactory->forPath(
-            renderingPath: 'tt_content',
-            contextRecordId: 'tt_content:' . $arguments['uid'],
+            'tt_content',
+            'tt_content:' . $arguments['uid']
         );
+
         $contextStack = new ContextStack($renderingContext->getViewHelperVariableContainer());
         $contextStack->push($context);
+
         $renderedChildren = $renderChildrenClosure();
+
         $contextStack->pop();
 
         return (string)$renderedChildren;
