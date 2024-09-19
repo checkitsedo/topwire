@@ -4,17 +4,32 @@ namespace Topwire\Turbo;
 
 class FrameOptions
 {
+    public bool $wrapResponse;
+    public ?string $src;
+    public ?string $target;
+    public bool $propagateUrl;
+    public bool $morph;
+    public ?string $pageTitle;
+    public array $additionalAttributes;
+
     /**
      * @param array<string, string> $additionalAttributes
      */
     public function __construct(
-        public readonly bool $wrapResponse = false,
-        public readonly ?string $src = null,
-        public readonly ?string $target = null,
-        public readonly bool $propagateUrl = false,
-        public readonly bool $morph = false,
-        public readonly ?string $pageTitle = null,
-        public readonly array $additionalAttributes = [],
+        bool $wrapResponse = false,
+        ?string $src = null,
+        ?string $target = null,
+        bool $propagateUrl = false,
+        bool $morph = false,
+        ?string $pageTitle = null,
+        array $additionalAttributes = []
     ) {
+        $this->wrapResponse = $wrapResponse;
+        $this->src = $src;
+        $this->target = $target;
+        $this->propagateUrl = $propagateUrl;
+        $this->morph = $morph;
+        $this->pageTitle = $pageTitle;
+        $this->additionalAttributes = $additionalAttributes;
     }
 }
