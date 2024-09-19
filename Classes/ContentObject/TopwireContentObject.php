@@ -20,10 +20,11 @@ class TopwireContentObject extends AbstractContentObject
         $context = $conf['context'];
         assert($context instanceof TopwireContext);
         $content = $this->renderContentWithoutRecursion($context);
+
         $frame = $context->getAttribute('frame');
         if (!$frame instanceof Frame
             || !$frame->wrapResponse
-            || !TopwireContext::isRequestSubmitted($this->request)
+            || !TopwireContext::isRequestSubmitted($GLOBALS['TSFE']->getRequest())  // Zugriff auf Request über TSFE
         ) {
             // The frame id is known and set during partial rendering
             // At the same time the rendered content already contains this id, so the frame is wrapped already
@@ -33,20 +34,24 @@ class TopwireContentObject extends AbstractContentObject
         $frameOptions = new FrameOptions();
         $pageTitle = $this->getTypoScriptFrontendController()->generatePageTitle();
         if ($pageTitle !== '') {
-            $frameOptions = new FrameOptions(pageTitle: $pageTitle);
+            // Kein benannter Parameter: Seite wird als erster Parameter übergeben
+            $frameOptions = new FrameOptions($pageTitle);
         }
+
+        // Kein benannter Parameter: frame, content, options, context in der richtigen Reihenfolge
         return (new FrameRenderer())->render(
-            frame: $frame,
-            content: $content,
-            options: $frameOptions,
-            context: $context,
+            $frame,
+            $content,
+            $frameOptions,
+            $context
         );
     }
 
     private function renderContentWithoutRecursion(TopwireContext $context): string
     {
         $actionRecursionPrefix = $context->getAttribute('plugin')?->actionName ?? null;
-        $frontendController = $this->request->getAttribute('frontend.controller');
+        $frontendController = $GLOBALS['TSFE']->getRequest()->getAttribute('frontend.controller');  // Zugriff auf Request über TSFE
+
         if (!isset($actionRecursionPrefix)
             || !$frontendController instanceof TypoScriptFrontendController
         ) {
@@ -56,13 +61,15 @@ class TopwireContentObject extends AbstractContentObject
                 $this->transformToRecordsConfiguration($context)
             );
         }
+
         // Prevent recursion, but allow rendering of the same plugin with a different action
-        // @see CONTENT and RECORDS content objects
         $currentlyRenderingRecordId = $frontendController->currentRecord;
         $requestedRenderingRecordId = $actionRecursionPrefix . $context->contextRecord->tableName . ':' . $context->contextRecord->id;
+        
         if (isset($frontendController->recordRegister[$requestedRenderingRecordId])) {
             return '';
         }
+
         $frontendController->currentRecord = $requestedRenderingRecordId;
         $content = $this->getContentObjectRenderer()->cObjGetSingle(
             'RECORDS',
@@ -81,9 +88,6 @@ class TopwireContentObject extends AbstractContentObject
         return [
             'source' => $context->contextRecord->tableName . '_' . $context->contextRecord->id,
             'tables' => $context->contextRecord->tableName,
-            // The pid check does not make sense when the context record is a page
-            // In that case it is only relevant, whether the page itself is available,
-            // thus we disable the pid check for that case
             'dontCheckPid' => $context->contextRecord->tableName === 'pages',
             'conf.' => [
                 $context->contextRecord->tableName => '< ' . $context->renderingPath->jsonSerialize(),
