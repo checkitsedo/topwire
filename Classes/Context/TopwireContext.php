@@ -19,8 +19,8 @@ class TopwireContext implements \JsonSerializable
     private array $attributes = [];
 
     public function __construct(
-        public RenderingPath $renderingPath,
-        public ContextRecord $contextRecord,
+        private RenderingPath $renderingPath,
+        private ContextRecord $contextRecord,
         ?string $cacheId = null
     ) {
         $this->scope = md5(
