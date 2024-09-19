@@ -12,14 +12,22 @@ use TYPO3\CMS\Frontend\Typolink\UnableToLinkException;
 
 class TopwirePageLinkBuilder extends PageLinkBuilder
 {
-    private readonly ?AbstractTypolinkBuilder $originalPageLinkBuilder;
-    private readonly TopwirePageLinkContext $pageLinkContext;
+    /**
+     * @var AbstractTypolinkBuilder|null
+     */
+    private $originalPageLinkBuilder;
+
+    /**
+     * @var TopwirePageLinkContext
+     */
+    private $pageLinkContext;
 
     public function __construct(
         ContentObjectRenderer $contentObjectRenderer,
         TypoScriptFrontendController $typoScriptFrontendController = null
     ) {
         parent::__construct($contentObjectRenderer, $typoScriptFrontendController);
+
         $defaultLinkBuilderClass = $GLOBALS['TYPO3_CONF_VARS']['FE']['typolinkBuilder']['overriddenDefault'] ?? null;
         if (is_string($defaultLinkBuilderClass)
             && is_subclass_of($defaultLinkBuilderClass, AbstractTypolinkBuilder::class)
@@ -32,6 +40,7 @@ class TopwirePageLinkBuilder extends PageLinkBuilder
         } else {
             $this->originalPageLinkBuilder = null;
         }
+
         $this->pageLinkContext = new TopwirePageLinkContext($contentObjectRenderer, $this->getTypoScriptFrontendController());
     }
 
@@ -43,7 +52,7 @@ class TopwirePageLinkBuilder extends PageLinkBuilder
     public function build(array &$linkDetails, string $linkText, string $target, array $conf): LinkResultInterface
     {
         $linkDetails['topwirePageLinkContext'] = $this->pageLinkContext;
-        if (isset($this->originalPageLinkBuilder)) {
+        if ($this->originalPageLinkBuilder !== null) {
             return $this->originalPageLinkBuilder->build($linkDetails, $linkText, $target, $conf);
         }
         return parent::build($linkDetails, $linkText, $target, $conf);
