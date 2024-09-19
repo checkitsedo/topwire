@@ -8,9 +8,11 @@ use Topwire\Context\Attribute;
 
 class Section implements Attribute
 {
-    public function __construct(
-        public readonly string $sectionName,
-    ) {
+    public string $sectionName;
+
+    public function __construct(string $sectionName)
+    {
+        $this->sectionName = $sectionName;
     }
 
     public function getCacheId(): string
@@ -23,8 +25,10 @@ class Section implements Attribute
         return null;
     }
 
-    public function jsonSerialize(): mixed
+    public function jsonSerialize(): array
     {
-        return null;
+        return [
+            'sectionName' => $this->sectionName,
+        ];
     }
 }
