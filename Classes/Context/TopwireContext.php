@@ -33,12 +33,13 @@ class TopwireContext implements \JsonSerializable
 
     public static function fromUntrustedString(string $untrustedString, ContextDenormalizer $denormalizer): self
     {
-        $data = \json_decode(
-            TopwireHash::fromUntrustedString($untrustedString)->secureString,
-            true,
-            512,
-            JSON_THROW_ON_ERROR
-        );
+        $decodedString = TopwireHash::fromUntrustedString($untrustedString)->secureString;
+        $data = \json_decode($decodedString, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \RuntimeException('Invalid JSON data: ' . json_last_error_msg());
+        }
+
         return $denormalizer->denormalize($data);
     }
 
@@ -49,8 +50,11 @@ class TopwireContext implements \JsonSerializable
 
     public function toHashedString(): string
     {
-        return (new TopwireHash(\json_encode($this, JSON_THROW_ON_ERROR)))
-            ->hashedString;
+        $json = \json_encode($this);
+        if ($json === false) {
+            throw new \RuntimeException('JSON encoding failed: ' . json_last_error_msg());
+        }
+        return (new TopwireHash($json))->hashedString;
     }
 
     public function withContextRecord(ContextRecord $contextRecord): self
@@ -60,10 +64,8 @@ class TopwireContext implements \JsonSerializable
         return $context;
     }
 
-    public function withAttribute(
-        string $name,
-        Attribute $attribute
-    ): self {
+    public function withAttribute(string $name, Attribute $attribute): self
+    {
         $newContext = new self(
             $this->renderingPath,
             $this->contextRecord,
@@ -90,7 +92,9 @@ class TopwireContext implements \JsonSerializable
         ];
         $attributes = array_filter(
             $this->attributes,
-            static fn (Attribute $attribute): bool => $attribute->jsonSerialize() !== null
+            function (Attribute $attribute): bool {
+                return $attribute->jsonSerialize() !== null;
+            }
         );
         if ($attributes !== []) {
             $normalizedContext['attributes'] = $attributes;
