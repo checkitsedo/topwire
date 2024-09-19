@@ -32,17 +32,25 @@ class RenderViewHelper extends AbstractViewHelper
         \Closure $renderChildrenClosure,
         RenderingContextInterface $renderingContext
     ): string {
+        // Ensure $renderingContext is of type RenderingContext
+        if (!$renderingContext instanceof RenderingContext) {
+            throw new \InvalidArgumentException('Expected instance of RenderingContext');
+        }
+
         $context = (new ContextStack($renderingContext->getViewHelperVariableContainer()))->current();
         if (!$context instanceof TopwireContext) {
             throw new InvalidTopwireContext('Can only render as child of a Topwire context view helper', 1671623956);
         }
-        assert($renderingContext instanceof RenderingContext);
-        $request = $renderingContext->getRequest()?->withAttribute('topwire', $context);
-        assert($request instanceof ServerRequestInterface);
-        $actionRequest = self::addActionNameToRequest(
-            $request,
-            $context,
-        );
+
+        // Fetch the request from the rendering context
+        $request = $renderingContext->getRequest();
+        if ($request instanceof ServerRequestInterface) {
+            $request = $request->withAttribute('topwire', $context);
+        } else {
+            throw new \RuntimeException('Expected instance of ServerRequestInterface');
+        }
+
+        $actionRequest = self::addActionNameToRequest($request, $context);
         $contentData = [];
         if ($request !== $actionRequest) {
             $contentData = [
@@ -52,6 +60,7 @@ class RenderViewHelper extends AbstractViewHelper
                 ]
             ];
         }
+
         $contentObjectRenderer = GeneralUtility::makeInstance(ContentObjectRenderer::class);
         $contentObjectRenderer->start(
             $contentData,
@@ -59,31 +68,32 @@ class RenderViewHelper extends AbstractViewHelper
             $actionRequest
         );
         $contentObjectRenderer->currentRecord = $context->contextRecord->tableName . ':' . $context->contextRecord->id;
-        return $contentObjectRenderer
-            ->cObjGetSingle(
-                TopwireContentObject::NAME,
-                [
-                    'context' => $context,
-                ]
-            );
+
+        return $contentObjectRenderer->cObjGetSingle(
+            TopwireContentObject::NAME,
+            [
+                'context' => $context,
+            ]
+        );
     }
 
     private static function addActionNameToRequest(ServerRequestInterface $request, TopwireContext $context): ServerRequestInterface
     {
         $plugin = $context->getAttribute('plugin');
-        if (!$plugin instanceof Plugin
-            || $plugin->actionName === null
-        ) {
+        if (!$plugin instanceof Plugin || $plugin->actionName === null) {
             return $request;
         }
+
         $pageArguments = $request->getAttribute('routing');
         if (!$pageArguments instanceof PageArguments) {
             return $request;
         }
+
         $extbaseArguments = [];
         if ($request instanceof Request) {
             $extbaseArguments = $request->getArguments();
         }
+
         $newRootArguments = array_merge(
             $pageArguments->getRouteArguments(),
             [
@@ -95,6 +105,7 @@ class RenderViewHelper extends AbstractViewHelper
                 ),
             ]
         );
+
         $modifiedPageArguments = new PageArguments(
             $pageArguments->getPageId(),
             $pageArguments->getPageType(),
@@ -102,6 +113,7 @@ class RenderViewHelper extends AbstractViewHelper
             $pageArguments->getStaticArguments(),
             $pageArguments->getDynamicArguments()
         );
+
         return $request->withAttribute('routing', $modifiedPageArguments);
     }
 }
