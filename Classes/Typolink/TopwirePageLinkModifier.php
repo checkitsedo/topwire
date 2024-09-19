@@ -84,7 +84,7 @@ class TopwirePageLinkModifier implements TypolinkModifyLinkConfigForPageLinksHoo
      * @throws InvalidConfiguration
      * @throws \JsonException
      */
-    private function buildQueryParameters(TopwirePageLinkContext $pageLinkContext, array $linkConfiguration, array $queryParameters, int|string|null $contextPageId = null): array
+    private function buildQueryParameters(TopwirePageLinkContext $pageLinkContext, array $linkConfiguration, array $queryParameters, $contextPageId = null): array
     {
         // @deprecated can be removed when TYPO3 v11 support is removed.
         $contextPageId = MathUtility::canBeInterpretedAsInteger($contextPageId) ? (int)$contextPageId : null;
@@ -102,22 +102,34 @@ class TopwirePageLinkModifier implements TypolinkModifyLinkConfigForPageLinksHoo
     private function resolveContext(TopwirePageLinkContext $pageLinkContext, array $linkConfiguration, array $queryParameters, ?int $contextPageId = null): TopwireContext
     {
         $topwireArguments = $this->resolveTopwireArguments($linkConfiguration, $queryParameters);
-        assert(in_array($topwireArguments['type'], ['plugin', 'contentElement', 'typoScript', 'context'], true));
-        $contextRecordId = $pageLinkContext->contentObjectRenderer->currentRecord;
+        if (!in_array($topwireArguments['type'], ['plugin', 'contentElement', 'typoScript', 'context'], true)) {
+            throw new InvalidConfiguration('Invalid topwire type specified', 1671560111);
+        }
+        $contextRecordId = $pageLinkContext->getContentObjectRenderer()->currentRecord;
         if (isset($topwireArguments['tableName'], $topwireArguments['recordUid'])) {
             $contextRecordId = $topwireArguments['tableName'] . ':' . $topwireArguments['recordUid'];
         }
-        $contextFactory = new TopwireContextFactory($pageLinkContext->frontendController);
-        $context = match ($topwireArguments['type']) {
-            'context' => $this->resolveFromRequest($pageLinkContext->contentObjectRenderer->getRequest(), $contextPageId),
-            'plugin' => $contextFactory->forPlugin($topwireArguments['extensionName'], $topwireArguments['pluginName'], $contextRecordId, $contextPageId),
-            'contentElement' => $contextFactory->forPath('tt_content', 'tt_content:' . $topwireArguments['uid']),
-            'typoScript' => $contextFactory->forPath($topwireArguments['typoScriptPath'], $contextRecordId, $contextPageId),
-        };
+        $contextFactory = new TopwireContextFactory($pageLinkContext->getFrontendController());
+        switch ($topwireArguments['type']) {
+            case 'context':
+                $context = $this->resolveFromRequest($pageLinkContext->getContentObjectRenderer()->getRequest(), $contextPageId);
+                break;
+            case 'plugin':
+                $context = $contextFactory->forPlugin($topwireArguments['extensionName'], $topwireArguments['pluginName'], $contextRecordId, $contextPageId);
+                break;
+            case 'contentElement':
+                $context = $contextFactory->forPath('tt_content', 'tt_content:' . $topwireArguments['uid']);
+                break;
+            case 'typoScript':
+                $context = $contextFactory->forPath($topwireArguments['typoScriptPath'], $contextRecordId, $contextPageId);
+                break;
+            default:
+                throw new InvalidConfiguration('Invalid topwire type specified', 1671560111);
+        }
         $frame = new Frame(
             baseId: $topwireArguments['frameId'] ?? 'link',
             wrapResponse: isset($topwireArguments['wrapResponse']) && (bool)(int)$topwireArguments['wrapResponse'],
-            scope: $context->scope,
+            scope: $context->scope
         );
         return $context->withAttribute('frame', $frame);
     }
@@ -152,7 +164,7 @@ class TopwirePageLinkModifier implements TypolinkModifyLinkConfigForPageLinksHoo
         if (isset($queryParameters[self::virtualLinkNamespace])) {
             return $this->ensureValidArguments($queryParameters[self::virtualLinkNamespace]);
         }
-        throw new \LogicException('Topwire link requested, but to link configuration is present', 1691582649);
+        throw new \LogicException('Topwire link requested, but no link configuration is present', 1691582649);
     }
 
     /**
@@ -162,19 +174,29 @@ class TopwirePageLinkModifier implements TypolinkModifyLinkConfigForPageLinksHoo
      */
     private function ensureValidArguments(array $topwireArguments): array
     {
-        try {
-            match ($topwireArguments['type'] ?? null) {
-                'context' => true,
-                'plugin' => !isset($topwireArguments['extensionName'], $topwireArguments['pluginName'])
-                    && throw new InvalidConfiguration('URLs of type "plugin" must have "extensionName" and "pluginName" set', 1671558884),
-                'contentElement' => !isset($topwireArguments['uid'])
-                    && throw new InvalidConfiguration('URLs of type "contentElement" must have "uid" set', 1671560042),
-                'typoScript' => !isset($topwireArguments['typoScriptPath'])
-                    && throw new InvalidConfiguration('URLs of type "typoScript" must have "typoScriptPath" set', 1671558886),
-            };
-        } catch (\UnhandledMatchError $e) {
-            throw new InvalidConfiguration('URL type must be set and must be either "plugin", "contentElement" or "typoScript"', 1671560111, $e);
+        if (!isset($topwireArguments['type'])) {
+            throw new InvalidConfiguration('URL type must be set and must be either "plugin", "contentElement" or "typoScript"', 1671560111);
         }
-        return $topwireArguments;
+        switch ($topwireArguments['type']) {
+            case 'context':
+                return $topwireArguments;
+            case 'plugin':
+                if (!isset($topwireArguments['extensionName'], $topwireArguments['pluginName'])) {
+                    throw new InvalidConfiguration('URLs of type "plugin" must have "extensionName" and "pluginName" set', 1671558884);
+                }
+                return $topwireArguments;
+            case 'contentElement':
+                if (!isset($topwireArguments['uid'])) {
+                    throw new InvalidConfiguration('URLs of type "contentElement" must have "uid" set', 1671560042);
+                }
+                return $topwireArguments;
+            case 'typoScript':
+                if (!isset($topwireArguments['typoScriptPath'])) {
+                    throw new InvalidConfiguration('URLs of type "typoScript" must have "typoScriptPath" set', 1671558886);
+                }
+                return $topwireArguments;
+            default:
+                throw new InvalidConfiguration('URL type must be set and must be either "plugin", "contentElement" or "typoScript"', 1671560111);
+        }
     }
 }
