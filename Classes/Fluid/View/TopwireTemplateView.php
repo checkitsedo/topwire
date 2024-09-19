@@ -13,12 +13,14 @@ class TopwireTemplateView extends AbstractTemplateView
 {
     public function render($actionName = null)
     {
+        /** @var RenderingContext $renderingContext */
         $renderingContext = $this->getCurrentRenderingContext();
-        assert($renderingContext instanceof RenderingContext);
-        $context = $renderingContext->getRequest()?->getAttribute('topwire');
+
+        $context = $renderingContext->getRequest() !== null ? $renderingContext->getRequest()->getAttribute('topwire') : null;
         if (!$context instanceof TopwireContext) {
             return parent::render($actionName);
         }
+
         $frame = $context->getAttribute('frame');
         if ($frame instanceof Frame) {
             $sectionName = str_replace(' ', '', ucwords(str_replace('-', ' ', strtolower($frame->baseId))));
@@ -29,10 +31,12 @@ class TopwireTemplateView extends AbstractTemplateView
                 return parent::render($actionName);
             }
         }
+
         $section = $context->getAttribute('section');
         if ($section instanceof Section) {
             return $this->renderSection($section->sectionName, (array)$renderingContext->getVariableProvider()->getAll());
         }
+
         return parent::render($actionName);
     }
 }
