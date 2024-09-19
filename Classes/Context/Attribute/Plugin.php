@@ -8,17 +8,31 @@ use Topwire\Context\Attribute;
 
 class Plugin implements Attribute
 {
-    public readonly string $pluginSignature;
+    public string $pluginSignature;
+    public string $extensionName;
+    public string $pluginName;
+    public string $pluginNamespace;
+    public ?string $actionName;
+    public bool $isOverride;
+    public ?string $forRecord;
+    public ?int $forPage;
 
     public function __construct(
-        public readonly string $extensionName,
-        public readonly string $pluginName,
-        public readonly string $pluginNamespace,
-        public readonly ?string $actionName = null,
-        public readonly bool $isOverride = false,
-        public readonly ?string $forRecord = null,
-        public readonly ?int $forPage = null,
+        string $extensionName,
+        string $pluginName,
+        string $pluginNamespace,
+        ?string $actionName = null,
+        bool $isOverride = false,
+        ?string $forRecord = null,
+        ?int $forPage = null
     ) {
+        $this->extensionName = $extensionName;
+        $this->pluginName = $pluginName;
+        $this->pluginNamespace = $pluginNamespace;
+        $this->actionName = $actionName;
+        $this->isOverride = $isOverride;
+        $this->forRecord = $forRecord;
+        $this->forPage = $forPage;
         $this->pluginSignature = strtolower($extensionName . '_' . $pluginName);
     }
 
@@ -32,8 +46,17 @@ class Plugin implements Attribute
         return null;
     }
 
-    public function jsonSerialize(): mixed
+    public function jsonSerialize(): array
     {
-        return null;
+        return [
+            'pluginSignature' => $this->pluginSignature,
+            'extensionName' => $this->extensionName,
+            'pluginName' => $this->pluginName,
+            'pluginNamespace' => $this->pluginNamespace,
+            'actionName' => $this->actionName,
+            'isOverride' => $this->isOverride,
+            'forRecord' => $this->forRecord,
+            'forPage' => $this->forPage,
+        ];
     }
 }
