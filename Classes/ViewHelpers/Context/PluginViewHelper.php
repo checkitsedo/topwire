@@ -38,26 +38,46 @@ class PluginViewHelper extends AbstractViewHelper
         \Closure $renderChildrenClosure,
         RenderingContextInterface $renderingContext
     ): string {
-        assert($renderingContext instanceof RenderingContext);
+        if (!$renderingContext instanceof RenderingContext) {
+            throw new \InvalidArgumentException('Expected instance of RenderingContext');
+        }
+
         $request = $renderingContext->getRequest();
-        assert($request instanceof ServerRequestInterface);
+        if (!$request instanceof ServerRequestInterface) {
+            throw new \RuntimeException('Expected instance of ServerRequestInterface');
+        }
+
         $frontendController = $request->getAttribute('frontend.controller');
-        assert($frontendController instanceof TypoScriptFrontendController);
-        $contextFactory = new TopwireContextFactory(
-            $frontendController
-        );
+        if (!$frontendController instanceof TypoScriptFrontendController) {
+            throw new \RuntimeException('Expected instance of TypoScriptFrontendController');
+        }
+
+        $contextFactory = new TopwireContextFactory($frontendController);
         $context = $contextFactory->forRequest($request, $arguments);
+
         if (isset($arguments['section'])) {
             $context = $context->withAttribute('section', new Section($arguments['section']));
         }
+
         $contextStack = new ContextStack($renderingContext->getViewHelperVariableContainer());
         $contextStack->push($context);
+
+        /** @var ConfigurationManager $configurationManager */
         $configurationManager = GeneralUtility::makeInstance(ConfigurationManager::class);
-        $configurationManager->getContentObject()?->setRequest($request->withAttribute('topwire', $context));
+        $contentObject = $configurationManager->getContentObject();
+        if ($contentObject !== null) {
+            $contentObject->setRequest($request->withAttribute('topwire', $context));
+        }
+        
         $renderingContext->setRequest($request->withAttribute('topwire', $context));
         $renderedChildren = $renderChildrenClosure();
+
+        // Restore original request and content object state
         $renderingContext->setRequest($request);
-        $configurationManager->getContentObject()?->setRequest($request);
+        if ($contentObject !== null) {
+            $contentObject->setRequest($request);
+        }
+
         $contextStack->pop();
 
         return (string)$renderedChildren;
